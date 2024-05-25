@@ -240,7 +240,7 @@ export const getFollowing = async (req, res) => {
   }
 };
 
-export const getUserProfile = async (req, res) => {
+export const getUserPosts = async (req, res) => {
   try {
     const { username } = req.params;
     const user = await User.findOne({ username });
