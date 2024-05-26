@@ -12,9 +12,9 @@ import LoadingSpinner from "./LoadingSpinner";
 const Post = ({ post }) => {
   const [comment, setComment] = useState("");
   const { data: authUser } = useQuery({ queryKey: ["authUser"] });
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
-//   console.log(post);
+  console.log(post);
 
   const { mutate: deletePost, isPending } = useMutation({
     mutationFn: async () => {
@@ -27,25 +27,58 @@ const Post = ({ post }) => {
         if (!res.ok) {
           throw new Error(data.error);
         }
-		
       } catch (error) {
         throw Error(error);
       }
     },
     onSuccess: () => {
       toast.success("Post deleted successfully");
-	  queryClient.invalidateQueries({queryKey:['posts']})
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+  });
+
+  const { mutate: likePost, isPending: isLiking } = useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await fetch(`/api/posts/like/${post._id}`, {
+          method: "POST",
+        });
+        const data = res.json();
+        if (!res.ok) {
+          throw new Error(data.error);
+        }
+        return data;
+      } catch (error) {
+        throw new Error(error);
+      }
+    },
+    onSuccess: (updatedLikes) => {
+      // this is not the best UX, bc it will refetch all posts
+      // queryClient.invalidateQueries({ queryKey: ["posts"] });
+
+      // instead, update the cache directly for that post
+      queryClient.setQueryData(["posts"], (oldData) => {
+        return oldData.map((p) => {
+          if (p._id === post._id) {
+            return { ...p, likes: updatedLikes };
+          }
+          return p;
+        });
+      });
+    },
+    onError: (error) => {
+      toast.error(error.message);
     },
   });
 
   const postOwner = post.user;
-  const isLiked = false;
+  const isLiked = post.likes.includes(authUser._id);
 
   const isMyPost = authUser._id === post.user._id;
 
   const formattedDate = "1h";
 
-  const isCommenting = false;
+  const isCommenting = true;
 
   const handleDeletePost = () => {
     deletePost();
@@ -55,7 +88,12 @@ const Post = ({ post }) => {
     e.preventDefault();
   };
 
-  const handleLikePost = () => {};
+  const handleLikePost = () => {
+    if (isLiking) {
+      return;
+    }
+    likePost();
+  };
 
   return (
     <>
@@ -82,12 +120,13 @@ const Post = ({ post }) => {
             </span>
             {isMyPost && (
               <span className="flex justify-end flex-1">
-                {!isPending && <FaTrash
-                  className="cursor-pointer hover:text-red-500"
-                  onClick={handleDeletePost}/>}
-				  {isPending && (
-					<LoadingSpinner size="sm"/>
-				  )}         
+                {!isPending && (
+                  <FaTrash
+                    className="cursor-pointer hover:text-red-500"
+                    onClick={handleDeletePost}
+                  />
+                )}
+                {isPending && <LoadingSpinner size="sm" />}
               </span>
             )}
           </div>
@@ -166,11 +205,7 @@ const Post = ({ post }) => {
                       onChange={(e) => setComment(e.target.value)}
                     />
                     <button className="btn btn-primary rounded-full btn-sm text-white px-4">
-                      {isCommenting ? (
-                        <span className="loading loading-spinner loading-md"></span>
-                      ) : (
-                        "Post"
-                      )}
+                      {isCommenting ? <LoadingSpinner size="sm" /> : "Post"}
                     </button>
                   </form>
                 </div>
@@ -188,16 +223,17 @@ const Post = ({ post }) => {
                 className="flex gap-1 items-center group cursor-pointer"
                 onClick={handleLikePost}
               >
-                {!isLiked && (
+                {isLiking && <LoadingSpinner size="sm" />}
+                {!isLiked && !isLiking && (
                   <FaRegHeart className="w-4 h-4 cursor-pointer text-slate-500 group-hover:text-pink-500" />
                 )}
-                {isLiked && (
+                {isLiked && !isLiking && (
                   <FaRegHeart className="w-4 h-4 cursor-pointer text-pink-500 " />
                 )}
 
                 <span
-                  className={`text-sm text-slate-500 group-hover:text-pink-500 ${
-                    isLiked ? "text-pink-500" : ""
+                  className={`text-sm  group-hover:text-pink-500 ${
+                    isLiked ? "text-pink-500" : "text-slate-500"
                   }`}
                 >
                   {post.likes.length}
