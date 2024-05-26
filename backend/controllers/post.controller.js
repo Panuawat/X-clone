@@ -167,7 +167,7 @@ export const likeUnlikePost = async (req, res) => {
 export const getAllPosts = async (req, res) => {
   try {
     const posts = await Post.find() //Post.find(): ดึงข้อมูลโพสต์ทั้งหมดจาก collection Post
-      .sort({ cretedAt: -1 }) //.sort({ createdAt: -1 }): เรียงลำดับโพสต์ตามวันที่สร้าง (createdAt) โดยเรียงจากใหม่ไปเก่า (-1 หมายถึงเรียงจากมากไปน้อย)
+      .sort({ createdAt: -1 }) //.sort({ createdAt: -1 }): เรียงลำดับโพสต์ตามวันที่สร้าง (createdAt) โดยเรียงจากใหม่ไปเก่า (-1 หมายถึงเรียงจากมากไปน้อย)
       .populate({
         path: "user",
         select: "-password", //.populate({ path: "user", select: "-password" }): ทำการ populate (ดึงข้อมูลที่เกี่ยวข้อง) ฟิลด์ user ของโพสต์ แต่ไม่ดึงรหัสผ่าน (-password)
@@ -224,7 +224,7 @@ export const getFollowing = async (req, res) => {
     const following = user.following;
 
     const feedPosts = await Post.find({ user: { $in: following } })
-      .sort({ createAt: -1 })
+      .sort({ createdAt: -1 })
       .populate({
         path: "user",
         select: "-password",
